@@ -197,16 +197,26 @@ static inline void border_create(CFTypeRef frame_region)
                                1.000f);
 }
 
+static inline void border_hide(void)
+{
+    if (g_border_id) SLSOrderWindow(g_connection, g_border_id, 0, 0);
+}
+
 static void border_refresh(void)
 {
+    //
+    // If there is no focused window, hide border (if we have one).
+    //
+
     AXUIElementRef ref = focused_window();
     if (!ref) {
+        border_hide();
+        return;
+    }
 
-        //
-        // No focused window, hide border if we have one.
-        //
-
-        if (g_border_id) SLSOrderWindow(g_connection, g_border_id, 0, 0);
+    g_window_id = ax_window_id(ref);
+    if (!g_window_id) {
+        border_hide();
         return;
     }
 
@@ -214,10 +224,8 @@ static void border_refresh(void)
     // Grab the frame of the currently focused window.
     //
 
-    g_window_id = ax_window_id(ref);
-    CGRect frame = window_frame(ref, g_window_id);
-
     CFTypeRef frame_region;
+    CGRect frame = window_frame(ref, g_window_id);
     CGSNewRegionWithRect(&frame, &frame_region);
 
     //
