@@ -243,7 +243,7 @@ static inline void border_create(CFTypeRef frame_region)
     SLSNewWindow(g_connection, 2, 0, 0, frame_region, &g_border_id);
     SLSSetWindowTags(g_connection, g_border_id, tags, 64);
     SLSSetWindowOpacity(g_connection, g_border_id, 0);
-    SLSSetWindowLevel(g_connection, g_border_id, CGWindowLevelForKey(5));
+    SLSSetWindowLevel(g_connection, g_border_id, CGWindowLevelForKey(17));
     g_border_context = SLWindowContextCreate(g_connection, g_border_id, 0);
     CGContextSetLineWidth(g_border_context, 4);
     CGContextSetRGBStrokeColor(g_border_context,
