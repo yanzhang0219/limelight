@@ -4,6 +4,7 @@
 // PRIVATE CORECRAPHICS / SKYLIGHT FUNCTION DECLARATIONS
 //
 
+extern void NSApplicationLoad(void);
 extern AXError _AXUIElementGetWindow(AXUIElementRef ref, uint32_t *wid);
 extern int SLSMainConnectionID(void);
 extern CGError SLSGetWindowBounds(int cid, uint32_t wid, CGRect *frame);
@@ -19,6 +20,7 @@ extern CGError SLSOrderWindow(int cid, uint32_t wid, int mode, uint32_t relative
 extern CGError SLSSetWindowLevel(int cid, uint32_t wid, int level);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
+extern CGError SLSRegisterConnectionNotifyProc(int cid, void *handler, uint32_t event, void *context);
 
 //
 // CALLBACK FUNCTION TYPES
@@ -29,6 +31,9 @@ typedef PROCESS_EVENT_HANDLER(process_event_handler);
 
 #define OBSERVER_CALLBACK(name) void name(AXObserverRef observer, AXUIElementRef element, CFStringRef notification, void *context)
 typedef OBSERVER_CALLBACK(observer_callback);
+
+#define CONNECTION_CALLBACK(name) void name(uint32_t type, void *data, size_t data_length, void *context, int cid)
+typedef CONNECTION_CALLBACK(connection_callback);
 
 //
 // FORWARD DECLARATIONS
@@ -41,6 +46,7 @@ static inline AXUIElementRef focused_window(void);
 static inline CGRect window_frame(AXUIElementRef ref, uint32_t id);
 static inline void subscribe_notifications(pid_t pid);
 static inline void unsubscribe_notifications(void);
+static inline void border_hide(void);
 static void border_refresh(void);
 
 //
@@ -57,6 +63,56 @@ static uint32_t g_window_id;
 //
 // EVENT HANDLERS
 //
+
+static inline void is_mission_control_active(void)
+{
+    CFArrayRef window_list = CGWindowListCopyWindowInfo(kCGWindowListOptionOnScreenOnly, 0);
+    int window_count = CFArrayGetCount(window_list);
+    bool found = false;
+
+    for (int i = 0; i < window_count; ++i) {
+        CFDictionaryRef dictionary = CFArrayGetValueAtIndex(window_list, i);
+
+        CFStringRef name = CFDictionaryGetValue(dictionary, kCGWindowName);
+        if (name) continue;
+
+        CFStringRef owner = CFDictionaryGetValue(dictionary, kCGWindowOwnerName);
+        if (!owner) continue;
+
+        CFNumberRef layer_ref = CFDictionaryGetValue(dictionary, kCGWindowLayer);
+        if (!layer_ref) continue;
+
+        uint64_t layer = 0;
+        CFNumberGetValue(layer_ref, CFNumberGetType(layer_ref), &layer);
+        if (layer != 18) continue;
+
+        if (CFEqual(CFSTR("Dock"), owner)) {
+            found = true;
+            break;
+        }
+    }
+
+    if (found) {
+        is_mission_control_active();
+    } else {
+        border_refresh();
+    }
+
+    CFRelease(window_list);
+}
+
+static CONNECTION_CALLBACK(connection_handler)
+{
+    //
+    // Mission Control was activated.
+    //
+
+    border_hide();
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        is_mission_control_active();
+    });
+}
 
 static OBSERVER_CALLBACK(notification_handler)
 {
@@ -292,7 +348,9 @@ int main(int argc, char **argv)
     success = InstallEventHandler(target, handler, 1, &type, NULL, &ref) == noErr;
     if (!success) return 2;
 
+    NSApplicationLoad();
     g_connection = SLSMainConnectionID();
+    SLSRegisterConnectionNotifyProc(g_connection, (void*)connection_handler, 1204, NULL);
     pid_t pid = focused_application();
     subscribe_notifications(pid);
     border_refresh();
