@@ -93,7 +93,9 @@ static inline void is_mission_control_active(void)
     }
 
     if (found) {
-        is_mission_control_active();
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            is_mission_control_active();
+        });
     } else {
         border_refresh();
     }
