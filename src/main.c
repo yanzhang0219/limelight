@@ -21,6 +21,8 @@ extern CGError SLSSetWindowLevel(int cid, uint32_t wid, int level);
 extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef options);
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
 extern CGError SLSRegisterConnectionNotifyProc(int cid, void *handler, uint32_t event, void *context);
+extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
+extern uint64_t SLSGetActiveSpace(int cid);
 
 //
 // CALLBACK FUNCTION TYPES
@@ -39,6 +41,8 @@ typedef CONNECTION_CALLBACK(connection_callback);
 // FORWARD DECLARATIONS
 //
 
+static CFArrayRef cfarray_of_cfnumbers(void *values, size_t size, int count, CFNumberType type);
+static inline void is_mission_control_active(void);
 static inline uint32_t ax_window_id(AXUIElementRef ref);
 static inline pid_t psn_to_pid(ProcessSerialNumber *psn);
 static inline pid_t focused_application(void);
@@ -48,6 +52,7 @@ static inline void subscribe_notifications(pid_t pid);
 static inline void unsubscribe_notifications(void);
 static inline void border_hide(void);
 static void border_refresh(void);
+static void border_move_to_active_space(void);
 
 //
 // GLOBAL VARIABLES
@@ -62,6 +67,77 @@ static uint32_t g_window_id;
 
 //
 // EVENT HANDLERS
+//
+
+static bool should_move_to_space;
+
+static CONNECTION_CALLBACK(connection_handler)
+{
+    if (type == 1401) {
+        //
+        // Active space changed
+        //
+
+        if (g_border_id) {
+            border_hide();
+            border_refresh();
+            border_move_to_active_space();
+        }
+    } else if (type == 1308) {
+        //
+        // Active display changed
+        //
+
+        if (g_border_id) {
+            border_hide();
+            should_move_to_space = true;
+            border_refresh();
+        }
+    } else if (type == 1204) {
+        //
+        // Mission Control was activated.
+        //
+
+        border_hide();
+
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            is_mission_control_active();
+        });
+    }
+}
+
+static OBSERVER_CALLBACK(notification_handler)
+{
+    if (CFEqual(notification, kAXFocusedWindowChangedNotification)) {
+        border_refresh();
+    } else {
+        uint32_t id = ax_window_id(element);
+        if (id && g_window_id == id) border_refresh();
+    }
+}
+
+static PROCESS_EVENT_HANDLER(process_handler)
+{
+    ProcessSerialNumber psn;
+    if (GetEventParameter(event, kEventParamProcessID, typeProcessSerialNumber, NULL, sizeof(psn), NULL, &psn) != noErr) {
+        return -1;
+    }
+
+    switch (GetEventKind(event)) {
+    case kEventAppFrontSwitched: {
+        border_hide();
+        unsubscribe_notifications();
+        pid_t pid = psn_to_pid(&psn);
+        subscribe_notifications(pid);
+        border_refresh();
+    } break;
+    }
+
+    return noErr;
+}
+
+//
+// HELPER FUNCTIONS
 //
 
 static inline void is_mission_control_active(void)
@@ -103,51 +179,22 @@ static inline void is_mission_control_active(void)
     CFRelease(window_list);
 }
 
-static CONNECTION_CALLBACK(connection_handler)
+static CFArrayRef cfarray_of_cfnumbers(void *values, size_t size, int count, CFNumberType type)
 {
-    //
-    // Mission Control was activated.
-    //
+    CFNumberRef temp[count];
 
-    border_hide();
-
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        is_mission_control_active();
-    });
-}
-
-static OBSERVER_CALLBACK(notification_handler)
-{
-    if (CFEqual(notification, kAXFocusedWindowChangedNotification)) {
-        border_refresh();
-    } else {
-        uint32_t id = ax_window_id(element);
-        if (id && g_window_id == id) border_refresh();
-    }
-}
-
-static PROCESS_EVENT_HANDLER(process_handler)
-{
-    ProcessSerialNumber psn;
-    if (GetEventParameter(event, kEventParamProcessID, typeProcessSerialNumber, NULL, sizeof(psn), NULL, &psn) != noErr) {
-        return -1;
+    for (int i = 0; i < count; ++i) {
+        temp[i] = CFNumberCreate(NULL, type, ((char *)values) + (size * i));
     }
 
-    switch (GetEventKind(event)) {
-    case kEventAppFrontSwitched: {
-        unsubscribe_notifications();
-        pid_t pid = psn_to_pid(&psn);
-        subscribe_notifications(pid);
-        border_refresh();
-    } break;
+    CFArrayRef result = CFArrayCreate(NULL, (const void **)temp, count, &kCFTypeArrayCallBacks);
+
+    for (int i = 0; i < count; ++i) {
+        CFRelease(temp[i]);
     }
 
-    return noErr;
+    return result;
 }
-
-//
-// HELPER FUNCTIONS
-//
 
 static inline uint32_t ax_window_id(AXUIElementRef ref)
 {
@@ -241,7 +288,7 @@ static void unsubscribe_notifications(void)
 
 static inline void border_create(CFTypeRef frame_region)
 {
-    uint32_t tags[2] = { (1 << 7) | (1 << 9) | (1 << 11), 0 };
+    uint32_t tags[2] = { (1 << 7) | (1 << 9) /*| (1 << 11)*/, 0 };
     SLSNewWindow(g_connection, 2, 0, 0, frame_region, &g_border_id);
     SLSSetWindowTags(g_connection, g_border_id, tags, 64);
     SLSSetWindowOpacity(g_connection, g_border_id, 0);
@@ -258,6 +305,14 @@ static inline void border_create(CFTypeRef frame_region)
 static inline void border_hide(void)
 {
     if (g_border_id) SLSOrderWindow(g_connection, g_border_id, 0, 0);
+}
+
+static void border_move_to_active_space(void)
+{
+    uint64_t sid = SLSGetActiveSpace(g_connection);
+    CFArrayRef border_id_ref = cfarray_of_cfnumbers(&g_border_id, sizeof(uint32_t), 1, kCFNumberSInt32Type);
+    SLSMoveWindowsToManagedSpace(g_connection, border_id_ref, sid);
+    CFRelease(border_id_ref);
 }
 
 static void border_refresh(void)
@@ -310,6 +365,11 @@ static void border_refresh(void)
     SLSDisableUpdate(g_connection);
     SLSOrderWindow(g_connection, g_border_id, 0, 0);
 
+    if (should_move_to_space) {
+        border_move_to_active_space();
+        should_move_to_space = false;
+    }
+
     SLSSetWindowShape(g_connection, g_border_id, 0.0f, 0.0f, frame_region);
 
     CGContextClearRect(g_border_context, frame);
@@ -353,6 +413,8 @@ int main(int argc, char **argv)
     NSApplicationLoad();
     g_connection = SLSMainConnectionID();
     SLSRegisterConnectionNotifyProc(g_connection, (void*)connection_handler, 1204, NULL);
+    SLSRegisterConnectionNotifyProc(g_connection, (void*)connection_handler, 1401, NULL);
+    SLSRegisterConnectionNotifyProc(g_connection, (void*)connection_handler, 1308, NULL);
     pid_t pid = focused_application();
     subscribe_notifications(pid);
     border_refresh();
