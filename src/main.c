@@ -63,6 +63,7 @@ static uint32_t g_border_id;
 static CGContextRef g_border_context;
 static AXObserverRef g_observer;
 static AXUIElementRef g_application;
+static AXUIElementRef g_window;
 static uint32_t g_window_id;
 
 //
@@ -110,6 +111,8 @@ static OBSERVER_CALLBACK(notification_handler)
 {
     if (CFEqual(notification, kAXFocusedWindowChangedNotification)) {
         border_refresh();
+    } else if (CFEqual(notification, kAXUIElementDestroyedNotification)) {
+        if (g_window && CFEqual(g_window, element)) border_refresh();
     } else {
         uint32_t id = ax_window_id(element);
         if (id && g_window_id == id) border_refresh();
@@ -256,13 +259,49 @@ static inline CGRect window_frame(AXUIElementRef ref, uint32_t id)
 // MANAGE NOTIFICATIONS
 //
 
+static char *ax_error_str[] =
+{
+    [-kAXErrorSuccess]                           = "kAXErrorSuccess",
+    [-kAXErrorFailure]                           = "kAXErrorFailure",
+    [-kAXErrorIllegalArgument]                   = "kAXErrorIllegalArgument",
+    [-kAXErrorInvalidUIElement]                  = "kAXErrorInvalidUIElement",
+    [-kAXErrorInvalidUIElementObserver]          = "kAXErrorInvalidUIElementObserver",
+    [-kAXErrorCannotComplete]                    = "kAXErrorCannotComplete",
+    [-kAXErrorAttributeUnsupported]              = "kAXErrorAttributeUnsupported",
+    [-kAXErrorActionUnsupported]                 = "kAXErrorActionUnsupported",
+    [-kAXErrorNotificationUnsupported]           = "kAXErrorNotificationUnsupported",
+    [-kAXErrorNotImplemented]                    = "kAXErrorNotImplemented",
+    [-kAXErrorNotificationAlreadyRegistered]     = "kAXErrorNotificationAlreadyRegistered",
+    [-kAXErrorNotificationNotRegistered]         = "kAXErrorNotificationNotRegistered",
+    [-kAXErrorAPIDisabled]                       = "kAXErrorAPIDisabled",
+    [-kAXErrorNoValue]                           = "kAXErrorNoValue",
+    [-kAXErrorParameterizedAttributeUnsupported] = "kAXErrorParameterizedAttributeUnsupported",
+    [-kAXErrorNotEnoughPrecision]                = "kAXErrorNotEnoughPrecision"
+};
+
 static void subscribe_notifications(pid_t pid)
 {
+    printf("---- %s(%d) ----\n", __FUNCTION__, pid);
     g_application = AXUIElementCreateApplication(pid);
-    AXObserverCreate(pid, notification_handler, &g_observer);
-    AXObserverAddNotification(g_observer, g_application, kAXFocusedWindowChangedNotification, NULL);
-    AXObserverAddNotification(g_observer, g_application, kAXWindowMovedNotification, NULL);
-    AXObserverAddNotification(g_observer, g_application, kAXWindowResizedNotification, NULL);
+
+    AXError error = AXObserverCreate(pid, notification_handler, &g_observer);
+    printf("AXObserverCreate = %s\n", ax_error_str[-error]);
+
+    error = AXObserverAddNotification(g_observer, g_application, kAXFocusedWindowChangedNotification, NULL);
+    printf("AXObserverAddNotification(kAXFocusedWindowChangedNotification) = %s\n", ax_error_str[-error]);
+
+    error = AXObserverAddNotification(g_observer, g_application, kAXWindowMovedNotification, NULL);
+    printf("AXObserverAddNotification(kAXWindowMovedNotification) = %s\n", ax_error_str[-error]);
+
+    error = AXObserverAddNotification(g_observer, g_application, kAXWindowResizedNotification, NULL);
+    printf("AXObserverAddNotification(kAXWindowResizedNotification) = %s\n", ax_error_str[-error]);
+
+    error = AXObserverAddNotification(g_observer, g_application, kAXWindowMiniaturizedNotification, NULL);
+    printf("AXObserverAddNotification(kAXWindowMiniaturizedNotification) = %s\n", ax_error_str[-error]);
+
+    error = AXObserverAddNotification(g_observer, g_application, kAXUIElementDestroyedNotification, NULL);
+    printf("AXObserverAddNotification(kAXUIElementDestroyedNotification) = %s\n", ax_error_str[-error]);
+
     CFRunLoopAddSource(CFRunLoopGetMain(), AXObserverGetRunLoopSource(g_observer), kCFRunLoopDefaultMode);
 }
 
@@ -270,6 +309,8 @@ static void unsubscribe_notifications(void)
 {
     if (!g_observer) return;
 
+    AXObserverRemoveNotification(g_observer, g_application, kAXUIElementDestroyedNotification);
+    AXObserverRemoveNotification(g_observer, g_application, kAXWindowMiniaturizedNotification);
     AXObserverRemoveNotification(g_observer, g_application, kAXWindowResizedNotification);
     AXObserverRemoveNotification(g_observer, g_application, kAXWindowMovedNotification);
     AXObserverRemoveNotification(g_observer, g_application, kAXFocusedWindowChangedNotification);
@@ -321,13 +362,15 @@ static void border_refresh(void)
     // If there is no focused window, hide border (if we have one).
     //
 
-    AXUIElementRef ref = focused_window();
-    if (!ref) {
+    if (g_window) CFRelease(g_window);
+
+    g_window = focused_window();
+    if (!g_window) {
         border_hide();
         return;
     }
 
-    g_window_id = ax_window_id(ref);
+    g_window_id = ax_window_id(g_window);
     if (!g_window_id) {
         border_hide();
         return;
@@ -338,7 +381,7 @@ static void border_refresh(void)
     //
 
     CFTypeRef frame_region;
-    CGRect frame = window_frame(ref, g_window_id);
+    CGRect frame = window_frame(g_window, g_window_id);
     CGSNewRegionWithRect(&frame, &frame_region);
 
     //
@@ -399,15 +442,10 @@ int main(int argc, char **argv)
     CFRelease(options);
     if (!success) return 1;
 
-    EventTargetRef target;
-    EventHandlerUPP handler;
-    EventTypeSpec type;
-    EventHandlerRef ref;
-    target = GetApplicationEventTarget();
-    handler = NewEventHandlerUPP(process_handler);
-    type.eventClass = kEventClassApplication;
-    type.eventKind  = kEventAppFrontSwitched;
-    success = InstallEventHandler(target, handler, 1, &type, NULL, &ref) == noErr;
+    EventTargetRef target = GetApplicationEventTarget();
+    EventHandlerUPP handler = NewEventHandlerUPP(process_handler);
+    EventTypeSpec type = { kEventClassApplication,  kEventAppFrontSwitched };
+    success = InstallEventHandler(target, handler, 1, &type, NULL, NULL) == noErr;
     if (!success) return 2;
 
     NSApplicationLoad();
