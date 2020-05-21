@@ -24,6 +24,9 @@ extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
 extern CGError SLSRegisterConnectionNotifyProc(int cid, void *handler, uint32_t event, void *context);
 extern CGError SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
 extern uint64_t SLSGetActiveSpace(int cid);
+extern bool SLSWindowIsOnCurrentSpace(uint32_t wid);
+extern CFStringRef SLSCopyActiveMenuBarDisplayIdentifier(int cid);
+extern bool SLSManagedDisplayIsAnimating(int cid, CFStringRef uuid);
 
 //
 // CALLBACK FUNCTION TYPES
@@ -54,6 +57,8 @@ static inline void unsubscribe_notifications(void);
 static inline void border_hide(void);
 static void border_refresh(void);
 static void border_move_to_active_space(void);
+static inline CFStringRef active_display_uuid(void);
+static inline bool active_display_is_animating(void);
 
 //
 // GLOBAL VARIABLES
@@ -66,12 +71,11 @@ static AXObserverRef g_observer;
 static AXUIElementRef g_application;
 static AXUIElementRef g_window;
 static uint32_t g_window_id;
+static bool should_move_to_space;
 
 //
 // EVENT HANDLERS
 //
-
-static bool should_move_to_space;
 
 static CONNECTION_CALLBACK(connection_handler)
 {
@@ -168,13 +172,31 @@ static void sigusr1_handler(int signal)
         unsubscribe_notifications();
         pid_t pid = focused_application();
         subscribe_notifications(pid);
-        border_refresh();
+        if (active_display_is_animating()) {
+            should_move_to_space = true;
+            border_hide();
+        } else {
+            border_refresh();
+        }
     });
 }
 
 //
 // HELPER FUNCTIONS
 //
+
+static inline CFStringRef active_display_uuid(void)
+{
+    return SLSCopyActiveMenuBarDisplayIdentifier(g_connection);
+}
+
+static inline bool active_display_is_animating(void)
+{
+    CFStringRef uuid = active_display_uuid();
+    bool result = SLSManagedDisplayIsAnimating(g_connection, uuid);
+    CFRelease(uuid);
+    return result;
+}
 
 static inline void is_mission_control_active(void)
 {
@@ -438,8 +460,8 @@ static void border_refresh(void)
     CGPathAddLineToPoint(insert, NULL, minx, maxy);
     CGPathAddLineToPoint(insert, NULL, minx, miny);
 
-    SLSDisableUpdate(g_connection);
     SLSOrderWindow(g_connection, g_border_id, 0, 0);
+    SLSDisableUpdate(g_connection);
 
     if (should_move_to_space) {
         border_move_to_active_space();
@@ -454,7 +476,10 @@ static void border_refresh(void)
 
     CGContextFlush(g_border_context);
 
-    SLSOrderWindow(g_connection, g_border_id, 1, 0);
+    if (SLSWindowIsOnCurrentSpace(g_border_id)) {
+        SLSOrderWindow(g_connection, g_border_id, 1, 0);
+    }
+
     SLSReenableUpdate(g_connection);
     CGPathRelease(insert);
     CFRelease(frame_region);
