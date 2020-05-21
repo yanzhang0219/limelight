@@ -57,7 +57,6 @@ static inline void unsubscribe_notifications(void);
 static inline void border_hide(void);
 static void border_refresh(void);
 static void border_move_to_active_space(void);
-static inline CFStringRef active_display_uuid(void);
 static inline bool active_display_is_animating(void);
 
 //
@@ -185,14 +184,9 @@ static void sigusr1_handler(int signal)
 // HELPER FUNCTIONS
 //
 
-static inline CFStringRef active_display_uuid(void)
-{
-    return SLSCopyActiveMenuBarDisplayIdentifier(g_connection);
-}
-
 static inline bool active_display_is_animating(void)
 {
-    CFStringRef uuid = active_display_uuid();
+    CFStringRef uuid = SLSCopyActiveMenuBarDisplayIdentifier(g_connection);
     bool result = SLSManagedDisplayIsAnimating(g_connection, uuid);
     CFRelease(uuid);
     return result;
