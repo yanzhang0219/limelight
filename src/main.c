@@ -163,11 +163,13 @@ static PROCESS_EVENT_HANDLER(process_handler)
 
 static void sigusr1_handler(int signal)
 {
-    border_hide();
-    unsubscribe_notifications();
-    pid_t pid = focused_application();
-    subscribe_notifications(pid);
-    border_refresh();
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.0f * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        border_hide();
+        unsubscribe_notifications();
+        pid_t pid = focused_application();
+        subscribe_notifications(pid);
+        border_refresh();
+    });
 }
 
 //
