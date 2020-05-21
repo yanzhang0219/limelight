@@ -1,4 +1,5 @@
 #include <Carbon/Carbon.h>
+#include <signal.h>
 
 //
 // PRIVATE CORECRAPHICS / SKYLIGHT FUNCTION DECLARATIONS
@@ -119,6 +120,26 @@ static OBSERVER_CALLBACK(notification_handler)
     }
 }
 
+#if 0
+
+//
+// :application_activated
+//
+// Enable this to subscribe to application activated events.
+// This event can sometimes trigger before an application is finished launching.
+// and we therefore end up in a situation where we are unable to properly
+// update and draw the border for the focused window of said application.
+//
+// To get around this issue, we will utilize yabai's signal system to notify
+// us when the focused application has changed. This is because yabai handles
+// the situation when an application has a delayed launch and whatever.
+//
+// Add the following signal to the end of your yabairc:
+// yabai -m signal --add event=application_activated action="pkill -SIGUSR1 limelight &> /dev/null"
+//
+// This is the simplest way to solve https://github.com/koekeishiya/limelight/issues/3
+//
+
 static PROCESS_EVENT_HANDLER(process_handler)
 {
     ProcessSerialNumber psn;
@@ -137,6 +158,16 @@ static PROCESS_EVENT_HANDLER(process_handler)
     }
 
     return noErr;
+}
+#endif
+
+static void sigusr1_handler(int signal)
+{
+    border_hide();
+    unsubscribe_notifications();
+    pid_t pid = focused_application();
+    subscribe_notifications(pid);
+    border_refresh();
 }
 
 //
@@ -442,11 +473,37 @@ int main(int argc, char **argv)
     CFRelease(options);
     if (!success) return 1;
 
+#if 0
+    //
+    // :application_activated
+    //
+    // Enable this to subscribe to application activated events.
+    // This event can sometimes trigger before an application is finished launching.
+    // and we therefore end up in a situation where we are unable to properly
+    // update and draw the border for the focused window of said application.
+    //
+    // To get around this issue, we will utilize yabai's signal system to notify
+    // us when the focused application has changed. This is because yabai handles
+    // the situation when an application has a delayed launch and whatever.
+    //
+    // Add the following signal to the end of your yabairc:
+    // yabai -m signal --add event=application_activated action="pkill -SIGUSR1 limelight &> /dev/null"
+    //
+    // This is the simplest way to solve https://github.com/koekeishiya/limelight/issues/3
+    //
+
     EventTargetRef target = GetApplicationEventTarget();
     EventHandlerUPP handler = NewEventHandlerUPP(process_handler);
     EventTypeSpec type = { kEventClassApplication,  kEventAppFrontSwitched };
     success = InstallEventHandler(target, handler, 1, &type, NULL, NULL) == noErr;
     if (!success) return 2;
+#endif
+
+    //
+    // Register a handler for the SIGUSR1 signal, so that we can refresh the border from a yabai signal.
+    //
+
+    signal(SIGUSR1, sigusr1_handler);
 
     NSApplicationLoad();
     g_connection = SLSMainConnectionID();
