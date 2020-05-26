@@ -488,8 +488,7 @@ static EVENT_CALLBACK(EVENT_HANDLER_WINDOW_DEMINIMIZED)
 
 static EVENT_CALLBACK(EVENT_HANDLER_SPACE_CHANGED)
 {
-    uint64_t sid = SLSGetActiveSpace(g_connection);
-    debug("%s: %lld\n", __FUNCTION__, sid);
+    debug("%s\n", __FUNCTION__);
 
     if (window_manager_refresh_application_windows(&g_window_manager)) {
         struct window *focused_window = window_manager_focused_window(&g_window_manager);
@@ -504,8 +503,7 @@ static EVENT_CALLBACK(EVENT_HANDLER_SPACE_CHANGED)
 
 static EVENT_CALLBACK(EVENT_HANDLER_DISPLAY_CHANGED)
 {
-    uint64_t sid = SLSGetActiveSpace(g_connection);
-    debug("%s: space %lld\n", __FUNCTION__, sid);
+    debug("%s\n", __FUNCTION__);
 
     if (window_manager_refresh_application_windows(&g_window_manager)) {
         struct window *focused_window = window_manager_focused_window(&g_window_manager);

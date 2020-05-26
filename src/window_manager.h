@@ -7,8 +7,6 @@ extern bool SLSManagedDisplayIsAnimating(int cid, CFStringRef uuid);
 extern CFUUIDRef CGDisplayCreateUUIDFromDisplayID(uint32_t did);
 extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces, uint32_t options, uint64_t *set_tags, uint64_t *clear_tags);
 
-extern uint64_t SLSGetActiveSpace(int cid);
-
 struct window_manager
 {
     AXUIElementRef system_element;
