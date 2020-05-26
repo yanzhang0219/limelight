@@ -148,13 +148,7 @@ void border_window_create(struct window *window)
     CGRect frame = window_frame(window);
     CGSNewRegionWithRect(&frame, &frame_region);
 
-    uint32_t tags[2] = {
-        kCGSModalWindowTagBit |
-        kCGSDisableShadowTagBit |
-        kCGSHighQualityResamplingTagBit |
-        kCGSIgnoreForExposeTagBit
-    };
-
+    uint32_t tags[2] = { kCGSIgnoreForExposeTagBit };
     SLSNewWindow(g_connection, 2, 0.0f, 0.0f, frame_region, &border->id);
     SLSSetWindowResolution(g_connection, border->id, 2.0f);
     SLSSetWindowTags(g_connection, border->id, tags, 64);
