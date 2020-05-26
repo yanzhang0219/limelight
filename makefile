@@ -1,17 +1,14 @@
 FRAMEWORK_PATH = -F/System/Library/PrivateFrameworks
 FRAMEWORK      = -framework Carbon -framework Cocoa -framework CoreServices -framework SkyLight
-BUILD_FLAGS    = -std=c99 -Wall -g -O0 -fvisibility=hidden -mmacosx-version-min=10.13
+BUILD_FLAGS    = -std=c99 -Wall -DNDEBUG -O2 -fvisibility=hidden -mmacosx-version-min=10.13
 BUILD_PATH     = ./bin
 DOC_PATH       = ./doc
 SRC            = ./src/manifest.m
 BINS           = $(BUILD_PATH)/limelight
 
-.PHONY: all clean install sign man
+.PHONY: all clean sign man
 
 all: clean $(BINS)
-
-install: BUILD_FLAGS=-std=c99 -Wall -DNDEBUG -O2 -fvisibility=hidden -mmacosx-version-min=10.13
-install: clean $(BINS)
 
 man:
 	asciidoctor -b manpage $(DOC_PATH)/limelight.asciidoc -o $(DOC_PATH)/limelight.1
