@@ -1,6 +1,6 @@
 ## Limelight
 
-Utility to add border to windows on macOS.
+Port of the border system that used to be implemented in yabai (v2.4.3).
 
 Requires access to the accessibility API. Supports macOS High Sierra and newer.
 
