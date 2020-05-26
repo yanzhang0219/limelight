@@ -59,7 +59,7 @@ limelight -m config <setting>::
     Get or set the value of <setting>.
 
 Settings
-^^^^^^^^^^^^^^^
+^^^^^^^^
 
 *debug_output* ['on|off']::
     Enable output of debug information to stdout.
