@@ -23,7 +23,7 @@ struct window_manager
     uint32_t focused_window_id;
     ProcessSerialNumber focused_window_psn;
     int window_border_width;
-    int window_border_radius;
+    float window_border_radius;
     uint32_t active_window_border_color;
     uint32_t normal_window_border_color;
 };
