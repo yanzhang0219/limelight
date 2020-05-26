@@ -1,5 +1,5 @@
-#define SOCKET_PATH_FMT         "/tmp/illumination_%s.socket"
-#define LCFILE_PATH_FMT         "/tmp/illumination_%s.lock"
+#define SOCKET_PATH_FMT         "/tmp/limelight_%s.socket"
+#define LCFILE_PATH_FMT         "/tmp/limelight_%s.lock"
 
 #define CLIENT_OPT_LONG         "--message"
 #define CLIENT_OPT_SHRT         "-m"
@@ -35,12 +35,12 @@ bool g_verbose;
 static int client_send_message(int argc, char **argv)
 {
     if (argc <= 1) {
-        error("illumination-msg: no arguments given! abort..\n");
+        error("limelight-msg: no arguments given! abort..\n");
     }
 
     char *user = getenv("USER");
     if (!user) {
-        error("illumination-msg: 'env USER' not set! abort..\n");
+        error("limelight-msg: 'env USER' not set! abort..\n");
     }
 
     int sockfd;
@@ -48,7 +48,7 @@ static int client_send_message(int argc, char **argv)
     snprintf(socket_file, sizeof(socket_file), SOCKET_PATH_FMT, user);
 
     if (!socket_connect_un(&sockfd, socket_file)) {
-        error("illumination-msg: failed to connect to socket..\n");
+        error("limelight-msg: failed to connect to socket..\n");
     }
 
     int message_length = argc - 1;
@@ -69,7 +69,7 @@ static int client_send_message(int argc, char **argv)
     }
 
     if (!socket_write_bytes(sockfd, message, message_length)) {
-        error("illumination-msg: failed to send data..\n");
+        error("limelight-msg: failed to send data..\n");
     }
 
     shutdown(sockfd, SHUT_WR);
@@ -109,7 +109,7 @@ static void acquire_lockfile(void)
 {
     int handle = open(g_lock_file, O_CREAT | O_WRONLY, 0600);
     if (handle == -1) {
-        error("illumination: could not create lock-file! abort..\n");
+        error("limelight: could not create lock-file! abort..\n");
     }
 
     struct flock lockfd = {
@@ -121,7 +121,7 @@ static void acquire_lockfile(void)
     };
 
     if (fcntl(handle, F_SETLK, &lockfd) == -1) {
-        error("illumination: could not acquire lock-file! abort..\n");
+        error("limelight: could not acquire lock-file! abort..\n");
     }
 }
 
@@ -129,14 +129,14 @@ static bool get_config_file(char *restrict filename, char *restrict buffer, int 
 {
     char *xdg_home = getenv("XDG_CONFIG_HOME");
     if (xdg_home && *xdg_home) {
-        snprintf(buffer, buffer_size, "%s/illumination/%s", xdg_home, filename);
+        snprintf(buffer, buffer_size, "%s/limelight/%s", xdg_home, filename);
         if (file_exists(buffer)) return true;
     }
 
     char *home = getenv("HOME");
     if (!home) return false;
 
-    snprintf(buffer, buffer_size, "%s/.config/illumination/%s", home, filename);
+    snprintf(buffer, buffer_size, "%s/.config/limelight/%s", home, filename);
     if (file_exists(buffer)) return true;
 
     snprintf(buffer, buffer_size, "%s/.%s", home, filename);
@@ -145,7 +145,7 @@ static bool get_config_file(char *restrict filename, char *restrict buffer, int 
 
 static void exec_config_file(void)
 {
-    if (!*g_config_file && !get_config_file("illuminationrc", g_config_file, sizeof(g_config_file))) {
+    if (!*g_config_file && !get_config_file("limelightrc", g_config_file, sizeof(g_config_file))) {
         notify("configuration", "could not locate config file..");
         return;
     }
@@ -172,7 +172,7 @@ static inline void init_misc_settings(void)
 {
     char *user = getenv("USER");
     if (!user) {
-        error("illumination: 'env USER' not set! abort..\n");
+        error("limelight: 'env USER' not set! abort..\n");
     }
 
     snprintf(g_socket_file, sizeof(g_socket_file), SOCKET_PATH_FMT, user);
@@ -197,7 +197,7 @@ static void parse_arguments(int argc, char **argv)
 {
     if ((string_equals(argv[1], VERSION_OPT_LONG)) ||
         (string_equals(argv[1], VERSION_OPT_SHRT))) {
-        fprintf(stdout, "illumination-v%d.%d.%d\n", MAJOR, MINOR, PATCH);
+        fprintf(stdout, "limelight-v%d.%d.%d\n", MAJOR, MINOR, PATCH);
         exit(EXIT_SUCCESS);
     }
 
@@ -215,10 +215,10 @@ static void parse_arguments(int argc, char **argv)
         } else if ((string_equals(opt, CONFIG_OPT_LONG)) ||
                    (string_equals(opt, CONFIG_OPT_SHRT))) {
             char *val = i < argc - 1 ? argv[++i] : NULL;
-            if (!val) error("illumination: option '%s|%s' requires an argument!\n", CONFIG_OPT_LONG, CONFIG_OPT_SHRT);
+            if (!val) error("limelight: option '%s|%s' requires an argument!\n", CONFIG_OPT_LONG, CONFIG_OPT_SHRT);
             snprintf(g_config_file, sizeof(g_config_file), "%s", val);
         } else {
-            error("illumination: '%s' is not a valid option!\n", opt);
+            error("limelight: '%s' is not a valid option!\n", opt);
         }
     }
 }
@@ -230,18 +230,18 @@ int main(int argc, char **argv)
     }
 
     if (is_root()) {
-        error("illumination: running as root is not allowed! abort..\n");
+        error("limelight: running as root is not allowed! abort..\n");
     }
 
     if (!ax_privilege()) {
-        error("illumination: could not access accessibility features! abort..\n");
+        error("limelight: could not access accessibility features! abort..\n");
     }
 
     init_misc_settings();
     acquire_lockfile();
 
     if (!event_loop_init(&g_event_loop)) {
-        error("illumination: could not initialize event_loop! abort..\n");
+        error("limelight: could not initialize event_loop! abort..\n");
     }
 
     process_manager_init(&g_process_manager);
@@ -255,7 +255,7 @@ int main(int argc, char **argv)
     SLSRegisterConnectionNotifyProc(g_connection, connection_handler, 1204, NULL);
 
     if (!socket_daemon_begin_un(&g_daemon, g_socket_file, message_handler)) {
-        error("illumination: could not initialize daemon! abort..\n");
+        error("limelight: could not initialize daemon! abort..\n");
     }
 
     exec_config_file();
