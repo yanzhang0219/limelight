@@ -1,11 +1,10 @@
 #include "event.h"
 
+extern int g_connection;
 extern struct event_loop g_event_loop;
 extern struct process_manager g_process_manager;
-extern struct display_manager g_display_manager;
 extern struct window_manager g_window_manager;
 extern bool g_mission_control_active;
-extern int g_connection;
 extern void *g_workspace_context;
 
 static struct process *process_retry_list[256];

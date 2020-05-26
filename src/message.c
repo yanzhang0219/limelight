@@ -1,7 +1,6 @@
 #include "message.h"
 
 extern struct event_loop g_event_loop;
-extern struct display_manager g_display_manager;
 extern struct window_manager g_window_manager;
 extern bool g_verbose;
 
