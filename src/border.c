@@ -98,8 +98,7 @@ void border_window_activate(struct window *window)
     struct border *border = &window->border;
     border->color = rgba_color_from_hex(g_window_manager.active_window_border_color);
     CGContextSetRGBStrokeColor(border->context, border->color.r, border->color.g, border->color.b, border->color.a);
-    int level = CGWindowLevelForKey(17);
-    SLSSetWindowLevel(g_connection, window->border.id, level);
+    SLSSetWindowLevel(g_connection, window->border.id, window_level(window) + 1);
 
     if (window_is_fullscreen(window)) {
         border_window_hide(window);
