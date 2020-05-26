@@ -153,11 +153,8 @@ void border_window_create(struct window *window)
     SLSSetWindowResolution(g_connection, border->id, 2.0f);
     SLSSetWindowTags(g_connection, border->id, tags, 64);
     SLSSetWindowOpacity(g_connection, border->id, 0);
-    SLSSetMouseEventEnableFlags(g_connection, border->id, false);
     SLSSetWindowLevel(g_connection, border->id, window_level(window));
     border->context = SLWindowContextCreate(g_connection, border->id, 0);
-    CGContextSetAllowsAntialiasing(border->context, true);
-    CGContextSetShouldAntialias(border->context, true);
     CGContextSetLineWidth(border->context, border->width);
     CGContextSetRGBStrokeColor(border->context, border->color.r, border->color.g, border->color.b, border->color.a);
     CFRelease(frame_region);
