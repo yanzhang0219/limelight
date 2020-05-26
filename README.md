@@ -22,4 +22,8 @@ Requires xcode command line tools
 ```sh
 # simply clone repo and run make
   make
+
+# symlink binary to somewhere in your path (does not need to be re-created after a rebuild)
+# replace the second path below with some directory in your path
+ln -s /path/to/bin/limelight /usr/local/bin/limelight
 ```
