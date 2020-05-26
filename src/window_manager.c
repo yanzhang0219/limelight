@@ -292,6 +292,7 @@ void window_manager_init(struct window_manager *wm)
 
     wm->window_border_width = 4;
     wm->window_border_radius = 0;
+    wm->window_border_placement = BORDER_PLACEMENT_INTERIOR;
     wm->active_window_border_color = 0xffff0000;
     wm->normal_window_border_color = 0xff555555;
 

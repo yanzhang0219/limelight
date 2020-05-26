@@ -26,6 +26,7 @@ struct window_manager
     float window_border_radius;
     uint32_t active_window_border_color;
     uint32_t normal_window_border_color;
+    enum border_placement window_border_placement;
 };
 
 void window_manager_set_border_window_width(struct window_manager *wm, int width);

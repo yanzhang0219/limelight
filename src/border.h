@@ -44,10 +44,6 @@ struct border
     int width;
     float radius;
     struct rgba_color color;
-    struct rgba_color insert_color;
-    bool insert_active;
-    int insert_dir;
-    bool enabled;
 };
 
 struct window;

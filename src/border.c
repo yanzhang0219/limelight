@@ -74,7 +74,6 @@ static inline float border_radius_clamp(CGRect frame, float radius, int width)
 void border_window_refresh(struct window *window)
 {
     if (!window->border.id) return;
-    if (!window->border.enabled) return;
     struct border *border = &window->border;
     border_window_ensure_same_space(window);
 
@@ -88,7 +87,6 @@ void border_window_refresh(struct window *window)
     region.size.height += (2*border->width);
     CGSNewRegionWithRect(&region, &region_ref);
 
-#if 0
     if (g_window_manager.window_border_placement == BORDER_PLACEMENT_EXTERIOR) {
         border_frame = (CGRect) { { 0.5f*border->width, 0.5f*border->width }, { region.size.width - border->width, region.size.height - border->width} };
     } else if (g_window_manager.window_border_placement == BORDER_PLACEMENT_INTERIOR) {
@@ -96,9 +94,6 @@ void border_window_refresh(struct window *window)
     } else {
         border_frame = (CGRect) { { border->width, border->width }, { region.size.width - 2*border->width, region.size.height - 2*border->width } };
     }
-#else
-    border_frame = (CGRect) { { border->width, border->width }, { region.size.width - 2*border->width, region.size.height - 2*border->width } };
-#endif
 
     float radius = border_radius_clamp(border_frame, border->radius, border->width);
     CGMutablePathRef path = border_normal_shape(border_frame, radius);
@@ -123,7 +118,6 @@ void border_window_refresh(struct window *window)
 void border_window_activate(struct window *window)
 {
     if (!window->border.id) return;
-    if (!window->border.enabled) return;
 
     struct border *border = &window->border;
     border->color = rgba_color_from_hex(g_window_manager.active_window_border_color);
@@ -141,7 +135,6 @@ void border_window_activate(struct window *window)
 void border_window_deactivate(struct window *window)
 {
     if (!window->border.id) return;
-    if (!window->border.enabled) return;
 
     struct border *border = &window->border;
     border->color = rgba_color_from_hex(g_window_manager.normal_window_border_color);
@@ -158,14 +151,12 @@ void border_window_deactivate(struct window *window)
 void border_window_show(struct window *window)
 {
     if (!window->border.id) return;
-    if (!window->border.enabled) return;
     SLSOrderWindow(g_connection, window->border.id, 1, window->id);
 }
 
 void border_window_hide(struct window *window)
 {
     if (!window->border.id) return;
-    if (!window->border.enabled) return;
     SLSOrderWindow(g_connection, window->border.id, 0, window->id);
 }
 
@@ -177,7 +168,6 @@ void border_window_create(struct window *window)
     border->color = rgba_color_from_hex(g_window_manager.normal_window_border_color);
     border->width = g_window_manager.window_border_width;
     border->radius = g_window_manager.window_border_radius;
-    border->enabled = true;
 
     CFTypeRef frame_region;
     CGRect frame = window_frame(window);

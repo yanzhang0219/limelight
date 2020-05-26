@@ -13,6 +13,11 @@ extern bool g_verbose;
 #define COMMAND_CONFIG_BORDER_RADIUS         "radius"
 #define COMMAND_CONFIG_BORDER_ACTIVE_COLOR   "active_color"
 #define COMMAND_CONFIG_BORDER_NORMAL_COLOR   "normal_color"
+#define COMMAND_CONFIG_BORDER_PLACEMENT      "placement"
+
+#define ARGUMENT_CONFIG_BORDER_PLACEMENT_EXT "exterior"
+#define ARGUMENT_CONFIG_BORDER_PLACEMENT_INT "interior"
+#define ARGUMENT_CONFIG_BORDER_PLACEMENT_IS  "inset"
 /* ----------------------------------------------------------------------------- */
 
 /* --------------------------------COMMON ARGUMENTS----------------------------- */
@@ -169,6 +174,19 @@ static void handle_domain_config(FILE *rsp, struct token domain, char *message)
             } else {
                 daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
             }
+        }
+     } else if (token_equals(command, COMMAND_CONFIG_BORDER_PLACEMENT)) {
+        struct token value = get_token(&message);
+        if (!token_is_valid(value)) {
+            fprintf(rsp, "%s\n", border_placement_str[g_window_manager.window_border_placement]);
+        } else if (token_equals(value, ARGUMENT_CONFIG_BORDER_PLACEMENT_EXT)) {
+            g_window_manager.window_border_placement = BORDER_PLACEMENT_EXTERIOR;
+        } else if (token_equals(value, ARGUMENT_CONFIG_BORDER_PLACEMENT_INT)) {
+            g_window_manager.window_border_placement = BORDER_PLACEMENT_INTERIOR;
+        } else if (token_equals(value, ARGUMENT_CONFIG_BORDER_PLACEMENT_IS)) {
+            g_window_manager.window_border_placement = BORDER_PLACEMENT_INSET;
+        } else {
+            daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
         }
     } else {
         daemon_fail(rsp, "unknown command '%.*s' for domain '%.*s'\n", command.length, command.text, domain.length, domain.text);
