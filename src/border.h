@@ -17,12 +17,6 @@ extern CGContextRef SLWindowContextCreate(int cid, uint32_t wid, CFDictionaryRef
 extern CGError CGSNewRegionWithRect(CGRect *rect, CFTypeRef *outRegion);
 extern void SLSMoveWindowsToManagedSpace(int cid, CFArrayRef window_list, uint64_t sid);
 
-#define kCGSModalWindowTagBit           (1 << 31)
-#define kCGSDisableShadowTagBit         (1 <<  3)
-#define kCGSHighQualityResamplingTagBit (1 <<  4)
-#define kCGSIgnoreForExposeTagBit       (1 <<  7)
-#define kCGSStickyTagBit                (1 << 11)
-
 enum border_placement
 {
     BORDER_PLACEMENT_EXTERIOR = 0,
