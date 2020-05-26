@@ -499,10 +499,6 @@ static EVENT_CALLBACK(EVENT_HANDLER_SPACE_CHANGED)
         }
     }
 
-    if (space_is_user(sid)) {
-        window_manager_check_for_windows_on_space(&g_window_manager, sid);
-    }
-
     return EVENT_SUCCESS;
 }
 
@@ -517,10 +513,6 @@ static EVENT_CALLBACK(EVENT_HANDLER_DISPLAY_CHANGED)
             border_window_activate(focused_window);
             window_manager_remove_lost_focused_event(&g_window_manager, focused_window->id);
         }
-    }
-
-    if (space_is_user(sid)) {
-        window_manager_check_for_windows_on_space(&g_window_manager, sid);
     }
 
     return EVENT_SUCCESS;

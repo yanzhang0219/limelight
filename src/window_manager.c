@@ -257,22 +257,6 @@ bool window_manager_refresh_application_windows(struct window_manager *wm)
     return window_count != wm->window.count;
 }
 
-void window_manager_check_for_windows_on_space(struct window_manager *wm, uint64_t sid)
-{
-    int window_count;
-    uint32_t *window_list = space_window_list(sid, &window_count, false);
-    if (!window_list) return;
-
-    for (int i = 0; i < window_count; ++i) {
-        struct window *window = window_manager_find_window(wm, window_list[i]);
-        if (!window) continue;
-        if (window->is_minimized || window->application->is_hidden)  continue;
-
-    }
-
-    free(window_list);
-}
-
 void window_manager_init(struct window_manager *wm)
 {
     wm->system_element = AXUIElementCreateSystemWide();
@@ -320,19 +304,6 @@ void window_manager_begin(struct window_manager *wm)
     }
 }
 
-CFStringRef display_manager_active_display_uuid(void)
-{
-    return SLSCopyActiveMenuBarDisplayIdentifier(g_connection);
-}
-
-bool display_manager_active_display_is_animating(void)
-{
-    CFStringRef uuid = display_manager_active_display_uuid();
-    bool result = SLSManagedDisplayIsAnimating(g_connection, uuid);
-    CFRelease(uuid);
-    return result;
-}
-
 bool display_manager_display_is_animating(uint32_t did)
 {
     CFStringRef uuid = display_uuid(did);
@@ -354,7 +325,7 @@ CFStringRef display_uuid(uint32_t did)
     return uuid_str;
 }
 
-uint32_t *space_window_list_for_connection(uint64_t sid, int cid, int *count, bool include_minimized)
+uint32_t *space_window_list(uint64_t sid, int *count, bool include_minimized)
 {
     uint32_t *window_list = NULL;
     uint64_t set_tags = 0;
@@ -362,7 +333,7 @@ uint32_t *space_window_list_for_connection(uint64_t sid, int cid, int *count, bo
     uint32_t options = include_minimized ? 0x7 : 0x2;
 
     CFArrayRef space_list_ref = cfarray_of_cfnumbers(&sid, sizeof(uint64_t), 1, kCFNumberSInt64Type);
-    CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(g_connection, cid, space_list_ref, options, &set_tags, &clear_tags);
+    CFArrayRef window_list_ref = SLSCopyWindowsWithOptionsAndTags(g_connection, 0, space_list_ref, options, &set_tags, &clear_tags);
     if (!window_list_ref) goto err;
 
     *count = CFArrayGetCount(window_list_ref);
@@ -382,22 +353,7 @@ err:
     return window_list;
 }
 
-uint32_t *space_window_list(uint64_t sid, int *count, bool include_minimized)
-{
-    return space_window_list_for_connection(sid, 0, count, include_minimized);
-}
-
-int space_type(uint64_t sid)
-{
-    return SLSSpaceGetType(g_connection, sid);
-}
-
 bool space_is_fullscreen(uint64_t sid)
 {
-    return space_type(sid) == 4;
-}
-
-bool space_is_user(uint64_t sid)
-{
-    return space_type(sid) == 0;
+    return SLSSpaceGetType(g_connection, sid) == 4;
 }
