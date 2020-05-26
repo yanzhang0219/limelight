@@ -44,13 +44,8 @@ struct window
     uint32_t id;
     uint32_t **volatile id_ptr;
     uint8_t notification;
-    bool has_shadow;
     bool is_fullscreen;
     bool is_minimized;
-    bool is_floating;
-    float rule_alpha;
-    bool rule_manage;
-    bool rule_fullscreen;
     struct border border;
 };
 
