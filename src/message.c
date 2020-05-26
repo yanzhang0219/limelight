@@ -9,16 +9,15 @@ extern bool g_verbose;
 
 /* --------------------------------DOMAIN CONFIG-------------------------------- */
 #define COMMAND_CONFIG_DEBUG_OUTPUT          "debug_output"
+#define COMMAND_CONFIG_BORDER_WIDTH          "width"
+#define COMMAND_CONFIG_BORDER_RADIUS         "radius"
+#define COMMAND_CONFIG_BORDER_ACTIVE_COLOR   "active_color"
+#define COMMAND_CONFIG_BORDER_NORMAL_COLOR   "normal_color"
 /* ----------------------------------------------------------------------------- */
 
 /* --------------------------------COMMON ARGUMENTS----------------------------- */
 #define ARGUMENT_COMMON_VAL_ON     "on"
 #define ARGUMENT_COMMON_VAL_OFF    "off"
-#define ARGUMENT_COMMON_SEL_PREV   "prev"
-#define ARGUMENT_COMMON_SEL_NEXT   "next"
-#define ARGUMENT_COMMON_SEL_FIRST  "first"
-#define ARGUMENT_COMMON_SEL_LAST   "last"
-#define ARGUMENT_COMMON_SEL_RECENT "recent"
 /* ----------------------------------------------------------------------------- */
 
 static bool token_equals(struct token token, char *match)
@@ -122,6 +121,54 @@ static void handle_domain_config(FILE *rsp, struct token domain, char *message)
             g_verbose = true;
         } else {
             daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+        }
+    } else if (token_equals(command, COMMAND_CONFIG_BORDER_WIDTH)) {
+        struct token value = get_token(&message);
+        if (!token_is_valid(value)) {
+            fprintf(rsp, "%d\n", g_window_manager.window_border_width);
+        } else {
+            int width = 0;
+            if (token_to_int(value, &width) && width) {
+                window_manager_set_border_window_width(&g_window_manager, width);
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        }
+    } else if (token_equals(command, COMMAND_CONFIG_BORDER_RADIUS)) {
+        struct token value = get_token(&message);
+        if (!token_is_valid(value)) {
+            fprintf(rsp, "%.4f\n", g_window_manager.window_border_radius);
+        } else {
+            float radius = token_to_float(value);
+            if (radius == -1.f || (radius >= 0.0f && radius <= 20.0f)) {
+                window_manager_set_border_window_radius(&g_window_manager, radius);
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        }
+    } else if (token_equals(command, COMMAND_CONFIG_BORDER_ACTIVE_COLOR)) {
+        struct token value = get_token(&message);
+        if (!token_is_valid(value)) {
+            fprintf(rsp, "0x%x\n", g_window_manager.active_window_border_color);
+        } else {
+            uint32_t color = token_to_uint32t(value);
+            if (color) {
+                window_manager_set_active_border_window_color(&g_window_manager, color);
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
+        }
+    } else if (token_equals(command, COMMAND_CONFIG_BORDER_NORMAL_COLOR)) {
+        struct token value = get_token(&message);
+        if (!token_is_valid(value)) {
+            fprintf(rsp, "0x%x\n", g_window_manager.normal_window_border_color);
+        } else {
+            uint32_t color = token_to_uint32t(value);
+            if (color) {
+                window_manager_set_normal_border_window_color(&g_window_manager, color);
+            } else {
+                daemon_fail(rsp, "unknown value '%.*s' given to command '%.*s' for domain '%.*s'\n", value.length, value.text, command.length, command.text, domain.length, domain.text);
+            }
         }
     } else {
         daemon_fail(rsp, "unknown command '%.*s' for domain '%.*s'\n", command.length, command.text, domain.length, domain.text);
