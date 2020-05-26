@@ -41,6 +41,7 @@ struct border
 {
     CGContextRef context;
     uint32_t id;
+    CFArrayRef id_ref;
     int width;
     float radius;
     struct rgba_color color;

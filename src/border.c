@@ -5,44 +5,20 @@ extern int g_connection;
 
 static void border_window_ensure_same_space(struct window *window)
 {
-    int w_space_count;
-    uint64_t *w_space_list = window_space_list(window, &w_space_count);
-    if (!w_space_list) return;
+    int space_count;
+    uint64_t *space_list = window_space_list(window, &space_count);
+    if (!space_list) return;
 
-    uint64_t w_sid = *w_space_list;
-    free(w_space_list);
-
-    if (w_space_count > 1) {
+    if (space_count > 1) {
         uint32_t tags[2] = { kCGSStickyTagBit };
         SLSSetWindowTags(g_connection, window->border.id, tags, 32);
-        return;
     } else {
         uint32_t tags[2] = { kCGSStickyTagBit };
         SLSClearWindowTags(g_connection, window->border.id, tags, 32);
+        SLSMoveWindowsToManagedSpace(g_connection, window->border.id_ref, space_list[0]);
     }
 
-    bool found = false;
-    uint64_t b_sid = 0;
-
-    CFArrayRef border_list_ref = cfarray_of_cfnumbers(&window->border.id, sizeof(uint32_t), 1, kCFNumberSInt32Type);
-    CFArrayRef border_space_list_ref = SLSCopySpacesForWindows(g_connection, 0x7, border_list_ref);
-
-    for (int i = 0; i < CFArrayGetCount(border_space_list_ref); ++i) {
-        CFNumberRef id_ref = CFArrayGetValueAtIndex(border_space_list_ref, i);
-        CFNumberGetValue(id_ref, CFNumberGetType(id_ref), &b_sid);
-
-        if (b_sid == w_sid) {
-            found = true;
-            break;
-        }
-    }
-
-    if (!found) {
-        SLSMoveWindowsToManagedSpace(g_connection, border_list_ref, w_sid);
-    }
-
-    CFRelease(border_list_ref);
-    CFRelease(border_space_list_ref);
+    free(space_list);
 }
 
 static CGMutablePathRef border_normal_shape(CGRect frame, float radius)
@@ -192,11 +168,13 @@ void border_window_create(struct window *window)
     CGContextSetLineWidth(border->context, border->width);
     CGContextSetRGBStrokeColor(border->context, border->color.r, border->color.g, border->color.b, border->color.a);
     CFRelease(frame_region);
+    border->id_ref = cfarray_of_cfnumbers(&border->id, sizeof(uint32_t), 1, kCFNumberSInt32Type);
 }
 
 void border_window_destroy(struct window *window)
 {
     if (window->border.id) {
+        CFRelease(window->border.id_ref);
         CGContextRelease(window->border.context);
         SLSReleaseWindow(g_connection, window->border.id);
         memset(&window->border, 0, sizeof(struct border));
