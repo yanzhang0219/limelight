@@ -100,8 +100,7 @@ void border_window_refresh(struct window *window)
     border_frame = (CGRect) { { border->width, border->width }, { region.size.width - 2*border->width, region.size.height - 2*border->width } };
 #endif
 
-    // float radius = border_radius_clamp(border_frame, border->radius, border->width);
-    float radius = 0; // border_radius_clamp(border_frame, 0, 4);
+    float radius = border_radius_clamp(border_frame, border->radius, border->width);
     CGMutablePathRef path = border_normal_shape(border_frame, radius);
     CGRect clear_region = { { 0, 0 }, { region.size.width, region.size.height } };
 
@@ -127,7 +126,7 @@ void border_window_activate(struct window *window)
     if (!window->border.enabled) return;
 
     struct border *border = &window->border;
-    border->color = rgba_color_from_hex(0xffff0000);
+    border->color = rgba_color_from_hex(g_window_manager.active_window_border_color);
     CGContextSetRGBStrokeColor(border->context, border->color.r, border->color.g, border->color.b, border->color.a);
     int level = CGWindowLevelForKey(17);
     SLSSetWindowLevel(g_connection, window->border.id, level);
@@ -145,7 +144,7 @@ void border_window_deactivate(struct window *window)
     if (!window->border.enabled) return;
 
     struct border *border = &window->border;
-    border->color = rgba_color_from_hex(0xff555555);
+    border->color = rgba_color_from_hex(g_window_manager.normal_window_border_color);
     CGContextSetRGBStrokeColor(border->context, border->color.r, border->color.g, border->color.b, border->color.a);
     SLSSetWindowLevel(g_connection, window->border.id, window_level(window));
 
@@ -172,14 +171,12 @@ void border_window_hide(struct window *window)
 
 void border_window_create(struct window *window)
 {
-    // if (!g_window_manager.enable_window_border) return;
-
     struct border *border = &window->border;
     if (border->id) return;
 
-    border->color = rgba_color_from_hex(0xff555555);
-    border->width = 4; // g_window_manager.window_border_width;
-    border->radius = 0; // g_window_manager.window_border_radius;
+    border->color = rgba_color_from_hex(g_window_manager.normal_window_border_color);
+    border->width = g_window_manager.window_border_width;
+    border->radius = g_window_manager.window_border_radius;
     border->enabled = true;
 
     CFTypeRef frame_region;
@@ -194,7 +191,7 @@ void border_window_create(struct window *window)
     };
 
     SLSNewWindow(g_connection, 2, 0.0f, 0.0f, frame_region, &border->id);
-    // SLSSetWindowResolution(g_connection, border->id, 2.0f);
+    SLSSetWindowResolution(g_connection, border->id, 2.0f);
     SLSSetWindowTags(g_connection, border->id, tags, 64);
     SLSSetWindowOpacity(g_connection, border->id, 0);
     SLSSetMouseEventEnableFlags(g_connection, border->id, false);

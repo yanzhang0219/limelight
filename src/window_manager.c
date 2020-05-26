@@ -13,6 +13,84 @@ static TABLE_COMPARE_FUNC(compare_wm)
     return *(uint32_t *) key_a == *(uint32_t *) key_b;
 }
 
+void window_manager_set_border_window_width(struct window_manager *wm, int width)
+{
+    wm->window_border_width = width;
+    for (int window_index = 0; window_index < wm->window.capacity; ++window_index) {
+        struct bucket *bucket = wm->window.buckets[window_index];
+        while (bucket) {
+            if (bucket->value) {
+                struct window *window = bucket->value;
+                if (window->border.id) {
+                    window->border.width = width;
+                    CGContextSetLineWidth(window->border.context, width);
+
+                    if ((!window->application->is_hidden) &&
+                        (!window->is_minimized) &&
+                        (!window->is_fullscreen)) {
+                        border_window_refresh(window);
+                    }
+                }
+            }
+
+            bucket = bucket->next;
+        }
+    }
+}
+
+void window_manager_set_border_window_radius(struct window_manager *wm, float radius)
+{
+    wm->window_border_radius = radius;
+    for (int window_index = 0; window_index < wm->window.capacity; ++window_index) {
+        struct bucket *bucket = wm->window.buckets[window_index];
+        while (bucket) {
+            if (bucket->value) {
+                struct window *window = bucket->value;
+                if (window->border.id) {
+                    window->border.radius = radius;
+
+                    if ((!window->application->is_hidden) &&
+                        (!window->is_minimized) &&
+                        (!window->is_fullscreen)) {
+                        border_window_refresh(window);
+                    }
+                }
+            }
+
+            bucket = bucket->next;
+        }
+    }
+}
+
+void window_manager_set_active_border_window_color(struct window_manager *wm, uint32_t color)
+{
+    wm->active_window_border_color = color;
+    struct window *window = window_manager_focused_window(wm);
+    if (window) border_window_activate(window);
+}
+
+void window_manager_set_normal_border_window_color(struct window_manager *wm, uint32_t color)
+{
+    wm->normal_window_border_color = color;
+    for (int window_index = 0; window_index < wm->window.capacity; ++window_index) {
+        struct bucket *bucket = wm->window.buckets[window_index];
+        while (bucket) {
+            if (bucket->value) {
+                struct window *window = bucket->value;
+                if (window->id != wm->focused_window_id) {
+                    if ((!window->application->is_hidden) &&
+                        (!window->is_minimized) &&
+                        (!window->is_fullscreen)) {
+                        border_window_deactivate(window);
+                    }
+                }
+            }
+
+            bucket = bucket->next;
+        }
+    }
+}
+
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 struct application *window_manager_focused_application(struct window_manager *wm)
@@ -211,6 +289,11 @@ void window_manager_init(struct window_manager *wm)
 {
     wm->system_element = AXUIElementCreateSystemWide();
     AXUIElementSetMessagingTimeout(wm->system_element, 1.0);
+
+    wm->window_border_width = 4;
+    wm->window_border_radius = 0;
+    wm->active_window_border_color = 0xffff0000;
+    wm->normal_window_border_color = 0xff555555;
 
     table_init(&wm->application, 150, hash_wm, compare_wm);
     table_init(&wm->window, 150, hash_wm, compare_wm);
