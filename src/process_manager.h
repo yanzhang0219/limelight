@@ -27,7 +27,6 @@ struct process_manager
     EventTypeSpec type[3];
     EventHandlerRef ref;
     pid_t front_pid;
-    pid_t last_front_pid;
     ProcessSerialNumber finder_psn;
 };
 
