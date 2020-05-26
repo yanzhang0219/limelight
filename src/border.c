@@ -10,10 +10,10 @@ static void border_window_ensure_same_space(struct window *window)
     if (!space_list) return;
 
     if (space_count > 1) {
-        uint32_t tags[2] = { kCGSStickyTagBit };
+        uint32_t tags[2] = { (1 << 11) };
         SLSSetWindowTags(g_connection, window->border.id, tags, 32);
     } else {
-        uint32_t tags[2] = { kCGSStickyTagBit };
+        uint32_t tags[2] = { (1 << 11) };
         SLSClearWindowTags(g_connection, window->border.id, tags, 32);
         SLSMoveWindowsToManagedSpace(g_connection, window->border.id_ref, space_list[0]);
     }
