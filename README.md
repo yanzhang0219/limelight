@@ -2,6 +2,8 @@
 
 Port of the border system that used to be implemented in yabai (v2.4.3).
 
+For the old version of limelight that was simply a focused border, see [focused_border_only](https://github.com/koekeishiya/limelight/tree/focused_border_only)
+
 Requires access to the accessibility API. Supports macOS High Sierra and newer.
 
 ```sh
