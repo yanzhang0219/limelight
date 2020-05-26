@@ -235,18 +235,6 @@ void window_manager_add_application_windows(struct window_manager *wm, struct ap
 
         debug("%s: %s %d\n", __FUNCTION__, window->application->name, window->id);
         window_manager_add_window(wm, window);
-
-        if ((!application->is_hidden) && (!window->is_minimized) && (!window->is_fullscreen) && (!window->rule_manage)) {
-            if (window->rule_fullscreen) {
-                window->rule_fullscreen = false;
-            } else if ((!window_level_is_standard(window)) ||
-                       (!window_is_standard(window)) ||
-                       (!window_can_move(window)) ||
-                       (window_is_sticky(window)) ||
-                       (!window_can_resize(window) && window_is_undersized(window))) {
-                window->is_floating = true;
-            }
-        }
     }
 
     free(window_list);
