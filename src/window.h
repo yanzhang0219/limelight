@@ -8,6 +8,7 @@ extern CGError SLSCopyWindowProperty(int cid, uint32_t wid, CFStringRef property
 extern CFStringRef SLSCopyManagedDisplayForWindow(int cid, uint32_t wid);
 extern CFStringRef SLSCopyBestManagedDisplayForRect(int cid, CGRect rect);
 extern CFArrayRef SLSCopySpacesForWindows(int cid, int selector, CFArrayRef window_list);
+extern int SLSSpaceGetType(int cid, uint64_t sid);
 
 const CFStringRef kAXFullscreenAttribute = CFSTR("AXFullScreen");
 

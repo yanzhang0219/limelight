@@ -325,6 +325,11 @@ bool window_is_unknown(struct window *window)
     return result;
 }
 
+static bool space_is_fullscreen(uint64_t sid)
+{
+    return SLSSpaceGetType(g_connection, sid) == 4;
+}
+
 struct window *window_create(struct application *application, AXUIElementRef window_ref, uint32_t window_id)
 {
     struct window *window = malloc(sizeof(struct window));

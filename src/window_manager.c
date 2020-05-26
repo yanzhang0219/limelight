@@ -352,8 +352,3 @@ err:
     CFRelease(space_list_ref);
     return window_list;
 }
-
-bool space_is_fullscreen(uint64_t sid)
-{
-    return SLSSpaceGetType(g_connection, sid) == 4;
-}

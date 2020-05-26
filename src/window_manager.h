@@ -5,7 +5,6 @@ extern OSStatus _SLPSGetFrontProcess(ProcessSerialNumber *psn);
 extern CGError SLSGetWindowOwner(int cid, uint32_t wid, int *wcid);
 extern bool SLSManagedDisplayIsAnimating(int cid, CFStringRef uuid);
 extern CFUUIDRef CGDisplayCreateUUIDFromDisplayID(uint32_t did);
-extern int SLSSpaceGetType(int cid, uint64_t sid);
 extern CFArrayRef SLSCopyWindowsWithOptionsAndTags(int cid, uint32_t owner, CFArrayRef spaces, uint32_t options, uint64_t *set_tags, uint64_t *clear_tags);
 
 extern uint64_t SLSGetActiveSpace(int cid);
@@ -51,7 +50,6 @@ void window_manager_begin(struct window_manager *window_manager);
 void window_manager_init(struct window_manager *window_manager);
 bool display_manager_display_is_animating(uint32_t did);
 uint32_t *space_window_list(uint64_t sid, int *count, bool include_minimized);
-bool space_is_fullscreen(uint64_t sid);
 CFStringRef display_uuid(uint32_t did);
 
 #endif
